@@ -1,8 +1,10 @@
 from flask import Flask, Response, request, abort, render_template, jsonify, send_file
+
+from datetime import datetime, timedelta
 import logging
 import sys
 
-from config import Config
+from config import Database
 from db import Database
 from models import Fund, Quote
 from utils import configure_logging
@@ -41,31 +43,27 @@ def index():
     return render_template('page.html', data=stats)
 
 
-@app.route('/proxydata')
-def proxydata():
-    protocol = request.args.get('protocol', None)
+@app.route('/quotes')
+def quotes():
+    fund_id = request.args.get('fund', None)
+    if not fund_id:
+        abort(400)
+
     limit = int(request.args.get('limit', 100))
-    max_age = int(request.args.get('max_age', 3600))
-    exclude_countries = request.args.get('exclude_countries', [])
+
+    # default_from = str(datetime.utcnow() - timedelta(days=30))
+    # date_from = request.args.get('from', default_from)
+    # date_from = datetime.strptime(date_from, '%d-%m-%Y').date()
+
+    # default_to = str(datetime.utcnow())
+    # date_to = request.args.get('to', default_to)
+    # date_to = datetime.strptime(date_to, '%d-%m-%Y').date()
 
     if limit > 1000:
         limit = 1000
-    if max_age > 86400:
-        max_age = 86400
 
-    if protocol:
-        protocol = ProxyProtocol[protocol.upper()]
-
-    if exclude_countries:
-        exclude_countries = exclude_countries.split(',')
-
-    query = Proxy.get_valid(
-        limit,
-        max_age,
-        protocol,
-        exclude_countries)
-
-    data = [proxy.data() for proxy in query.execute()]
+    query = Quote.get_by_fund(fund_id).dicts()
+    data = [quote for quote in query.execute()]
 
     return jsonify(data)
 
@@ -126,9 +124,9 @@ def cleanup():
 
 if __name__ == '__main__':
     try:
-        args = Config.get_args()
+        args = Database.get_args()
         configure_logging(log, args.verbose, args.log_path, "-webserver")
-        db = Database()
+        db = Database.get_db()
 
         log.info('Starting webserver...')
         # Note: Flask reloader runs two processes
