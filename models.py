@@ -5,9 +5,9 @@ import logging
 
 from peewee import (
     fn, JOIN, Case, OperationalError, IntegrityError,
-    Model, ModelSelect, ModelUpdate, ModelDelete, AutoField,
-    ForeignKeyField, BigAutoField, DateTimeField, CharField,
-    IntegerField, BigIntegerField, SmallIntegerField, FloatField)
+    Model, ModelSelect, ModelUpdate, ModelDelete,
+    ForeignKeyField, AutoField, BigAutoField, DateField, DateTimeField,
+    CharField, IntegerField, BigIntegerField, SmallIntegerField, FloatField)
 
 from datetime import datetime, timedelta
 
@@ -86,7 +86,24 @@ class Quote(BaseModel):
     id = BigAutoField()
     fund = ForeignKeyField(Fund, backref='quotes', on_delete='CASCADE')
     value = FloatField(null=False)
-    created = DateTimeField(index=True, default=datetime.utcnow)
+    date = DateField(index=True, default=datetime.today)
+    modified = DateTimeField(index=True, default=datetime.utcnow)
+
+    @staticmethod
+    def get_latest(fund):
+        query = (Quote
+                 .select()
+                 .where(Quote.fund == fund)
+                 .order_by(Quote.date.desc()))
+        return query.first()
+
+    @staticmethod
+    def get_by_fund(fund):
+        query = (Quote
+                 .select()
+                 .where(Quote.fund == fund)
+                 .order_by(Quote.date.asc()))
+        return query
 
 
 class DBConfig(BaseModel):

@@ -13,13 +13,12 @@ log = logging.getLogger(__name__)
 
 
 class CGD(Scrapper):
-    URL = ('https://www.cgd.pt/Particulares/Poupanca-Investimento/Fundos-de-Investimento'
-           '/Pages/CotacoeseRendibilidades.aspx')
+    URL = ('https://www.cgd.pt/Particulares/Poupanca-Investimento/Fundos-de-Investimento/Pages/CotacoeseRendibilidades.aspx')
     BANK = 'CGD'
 
     def __init__(self):
         Scrapper.__init__(self, name=self.BANK)
-        self.db = Database()
+        self.db = Database.get_db()
 
     def scrap(self):
         content = self.make_request(self.URL)
@@ -45,30 +44,40 @@ class CGD(Scrapper):
                 log.error(f'Unable to find a valid date in: {date}')
                 continue
 
-            date = datetime.strptime(match.group(), '%d-%m-%Y')
-            max_age = datetime.utcnow() - timedelta(hours=self.args.scrapper_frequency)
-
-            recent_quotes = Quote.select().where(
-                Quote.fund == fund,
-                Quote.created > max_age
-            ).count()
-
-            if recent_quotes > 0:
-                log.debug(f'Quote for {name} on {date} already exists.')
-                continue
-            if date < datetime.utcnow() - timedelta(days=2):
-                log.debug(f'Quote for {name} on {date} is too old.')
-                continue
+            date = datetime.strptime(match.group(), '%d-%m-%Y').date()
+            # max_age = datetime.utcnow() - timedelta(hours=self.args.scrapper_frequency)
 
             quote = info.find('div', class_="cotacaoDia").get_text()
             match = re.search(r'([\d\,]+) €', quote)
-            if match:
-                quote = float(match.group(1).replace(',', '.'))
+            if not match:
+                log.error(f'Unable to find a valid quote for: {date}')
+                continue
 
-            new_quote = Quote.create(fund=fund, value=quote)
-            log.debug(f'Quote for {name} on {date}: {new_quote.value}')
+            quote = float(match.group(1).replace(',', '.'))
 
-            prev_quote = info.find('div', class_="cotacaoDiaAnterior").get_text()
-            match = re.search(r'([\d\,]+) €', prev_quote)
-            if match:
-                prev_quote = float(match.group(1).replace(',', '.'))
+            self.update_db(fund, date, quote)
+
+            # prev_quote = info.find('div', class_="cotacaoDiaAnterior").get_text()
+            # match = re.search(r'([\d\,]+) €', prev_quote)
+            # if match:
+            #     prev_quote = float(match.group(1).replace(',', '.'))
+
+    def update_db(self, fund, date, value):
+        quote = Quote.get_or_none(
+            Quote.fund == fund,
+            Quote.date == date,
+        )
+
+        if quote and quote.value == value:
+            log.debug(f'Quote for {fund.name} on {date} already exists.')
+            return
+
+        if not quote:
+            quote = Quote.create(fund=fund, date=date, value=value)
+            log.debug(f'Quote for {fund.name} on {date}: {quote.value}')
+            return
+
+        quote.value = value
+        quote.modified = datetime.utcnow()
+        quote.save()
+        log.debug(f'Updated quote for {fund.name} on {date}: {quote.value}')

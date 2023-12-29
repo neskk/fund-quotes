@@ -9,6 +9,7 @@ from utils import configure_logging
 from config import Config
 from db import Database
 
+from funds.ar import AR
 from funds.cgd import CGD
 
 log = logging.getLogger()
@@ -25,10 +26,10 @@ class App(Thread):
     def __init__(self):
         Thread.__init__(self, name='main', daemon=False)
         self.args = Config.get_args()
-        self.db = Database()
 
     def run(self):
         try:
+            self.db = Database.get_db()
             self.work()
         except (KeyboardInterrupt, SystemExit):
             log.info('Interrupted application.')
@@ -43,6 +44,8 @@ class App(Thread):
     def work(self):
         log.debug('Startup')
         scrapper = CGD()
+        scrapper.run()
+        scrapper = AR()
         scrapper.run()
 
     def stop(self):

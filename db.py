@@ -3,7 +3,7 @@
 
 import logging
 
-from peewee import DatabaseProxy, DatabaseError, OperationalError
+from peewee import DatabaseError, OperationalError
 from playhouse.pool import PooledMySQLDatabase
 from playhouse.migrate import migrate, MySQLMigrator
 
@@ -20,13 +20,22 @@ log = logging.getLogger(__name__)
 # https://docs.peewee-orm.com/en/latest/peewee/database.html#setting-the-database-at-run-time
 ###############################################################################
 class Database():
-    BATCH_SIZE = 250  # TODO: move to Config argparse
-    DB = DatabaseProxy()
+    """ Singleton class that handles the database connection """
+    DB = None
     MODELS = [Fund, Quote, DBConfig]
     SCHEMA_VERSION = 1
 
+    @staticmethod
+    def get_db():
+        """ Static access method """
+        if Database.DB is None:
+            Database()
+        return Database.DB
+
     def __init__(self):
         """ Create a pooled connection to MySQL database """
+        if Database.DB is not None:
+            raise Exception('This class is a singleton!')
         self.args = Config.get_args()
 
         log.info('Connecting to MySQL database on '
@@ -45,11 +54,10 @@ class Database():
             stale_timeout=180,  # use None to disable
             timeout=10)  # 0 blocks indefinitely
 
-        # Initialize DatabaseProxy
-        self.DB.initialize(database)
+        Database.DB = database
 
         # Bind models to this database
-        self.DB.bind(self.MODELS)
+        database.bind(self.MODELS)
 
         try:
             self.DB.connect()

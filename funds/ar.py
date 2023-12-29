@@ -14,11 +14,14 @@ log = logging.getLogger(__name__)
 
 class AR(Scrapper):
     URL = ('https://www.bancoinvest.pt/poupanca-e-investimento/investimento/grafico?isin=PTARMCLM0004')
+    # https://www.bancoinvest.pt/poupanca-e-investimento/investimento/fundos-de-investimento/detalhe-fundo-de-investimento?isin=PTARMCLM0004
     BANK = 'AR'
+    FUND_NAME = 'Alves Ribeiro PPR/OICVM'
+    ISIN = 'PTARMCLM0004'
 
     def __init__(self):
         Scrapper.__init__(self, name=self.BANK)
-        self.db = Database()
+        self.db = Database.get_db()
 
     def scrap(self):
         content = self.make_request(self.URL)
@@ -30,44 +33,38 @@ class AR(Scrapper):
             Fund.database().close()
 
     def parse(self, content):
-        soup = BeautifulSoup(content, 'html.parser')
-        details = soup.find_all('div', 'detalhesFundo')
+        fund, is_new = Fund.get_or_create(bank=self.BANK, name=self.FUND_NAME)
+        latest_quote = Quote.get_latest(fund)
 
-        for info in details:
-            name = info.find('a', class_='nomeFundo').get_text()
+        pattern = r'n(\d{2}-\d{2}-\d{4};[\d\,]+);'
+        data = re.findall(pattern, content)
+        for entry in data:
+            date, quote = entry.split(';')
 
-            fund, is_new = Fund.get_or_create(bank=self.BANK, name=name)
+            date = datetime.strptime(date, '%d-%m-%Y').date()
+            quote = float(quote.replace(',', '.'))
 
-            date = info.find('div', class_='cotacaoDiaLbl').get_text()
-            match = re.search(r'\d{2}\-\d{2}\-\d{4}', date)
-            if not match:
-                log.error(f'Unable to find a valid date in: {date}')
+            if latest_quote.date >= date:
                 continue
 
-            date = datetime.strptime(match.group(), '%d-%m-%Y')
-            max_age = datetime.utcnow() - timedelta(hours=self.args.scrapper_frequency)
+            self.update_db(fund, date, quote)
 
-            recent_quotes = Quote.select().where(
-                Quote.fund == fund,
-                Quote.created > max_age
-            ).count()
+    def update_db(self, fund, date, value):
+        quote = Quote.get_or_none(
+            Quote.fund == fund,
+            Quote.date == date,
+        )
 
-            if recent_quotes > 0:
-                log.debug(f'Quote for {name} on {date} already exists.')
-                continue
-            if date < datetime.utcnow() - timedelta(days=2):
-                log.debug(f'Quote for {name} on {date} is too old.')
-                continue
+        if quote and quote.value == value:
+            log.debug(f'Quote for {fund.name} on {date} already exists.')
+            return
 
-            quote = info.find('div', class_="cotacaoDia").get_text()
-            match = re.search(r'([\d\,]+) €', quote)
-            if match:
-                quote = float(match.group(1).replace(',', '.'))
+        if not quote:
+            quote = Quote.create(fund=fund, date=date, value=value)
+            log.debug(f'Quote for {fund.name} on {date}: {quote.value}')
+            return
 
-            new_quote = Quote.create(fund=fund, value=quote)
-            log.debug(f'Quote for {name} on {date}: {new_quote.value}')
-
-            prev_quote = info.find('div', class_="cotacaoDiaAnterior").get_text()
-            match = re.search(r'([\d\,]+) €', prev_quote)
-            if match:
-                prev_quote = float(match.group(1).replace(',', '.'))
+        quote.value = value
+        quote.modified = datetime.utcnow()
+        quote.save()
+        log.debug(f'Updated quote for {fund.name} on {date}: {quote.value}')
