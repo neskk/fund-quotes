@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %} Charts {% endblock %}
+{% block title %} Stats {% endblock %}
 {% block meta %}
 {% include "meta.html" %}
 {% endblock %}
 {% block content %}
-<h3>Charts</h3>
+<h3>Stats</h3>
 <div class="container">
   {# https://jinja.palletsprojects.com/en/3.0.x/templates/#whitespace-control #}
   {%- for key,value in data.items() %}

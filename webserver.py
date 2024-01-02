@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import logging
 import sys
 
-from config import Database
+from config import Config
 from db import Database
 from models import Fund, Quote
 from utils import configure_logging
@@ -43,11 +43,17 @@ def index():
     return render_template('page.html', data=stats)
 
 
-@app.route('/quotes')
-def quotes():
-    fund_id = request.args.get('fund', None)
-    if not fund_id:
-        abort(400)
+@app.route('/chart/<int:fund_id>')
+def chart(fund_id):
+    query = Quote.get_by_fund(fund_id).dicts()
+    data = [quote for quote in query.execute()]
+    return render_template('chart.html', data=data)
+
+
+@app.route('/quotes/<int:fund_id>')
+def quotes(fund_id):
+    # if not fund_id:
+    #     abort(400)
 
     limit = int(request.args.get('limit', 100))
 
@@ -63,7 +69,7 @@ def quotes():
         limit = 1000
 
     query = Quote.get_by_fund(fund_id).dicts()
-    data = [quote for quote in query.execute()]
+    data = [(quote['date'].strftime('%d-%m-%Y'), quote['value']) for quote in query.execute()]
 
     return jsonify(data)
 
@@ -124,7 +130,7 @@ def cleanup():
 
 if __name__ == '__main__':
     try:
-        args = Database.get_args()
+        args = Config.get_args()
         configure_logging(log, args.verbose, args.log_path, "-webserver")
         db = Database.get_db()
 
