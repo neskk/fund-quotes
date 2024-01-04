@@ -33,11 +33,23 @@
       maker: {color: '#DD2222'}
     }
 
+    
+    rows[rows.length-2]
+    var indicator = {
+      type: "indicator",
+      mode: "number+delta",
+      value: rows[rows.length-1]['value']*1000,
+      delta: { reference: rows[rows.length-2]['value']*1000, valueformat: ".0f" },
+      domain: { y: [0, 0.25], x: [0.75, 1] },
+      title: { text: "x1000" }
+    }
+    console.log(indicator);
+    var data = [trace1, indicator]
     var layout = {
       title: '{{fund.bank}} - {{fund.name}}',
     };
 
-    Plotly.newPlot('myChart', [trace1], layout);
+    Plotly.newPlot('myChart', data, layout);
   });
 </script>
 {% endblock %}
