@@ -8,7 +8,11 @@
   <title>Fund Quotes • {% block title %}{% endblock %}</title>
 
   {% block meta %}{% endblock %}
-  <link rel="icon" href="images/favicon.ico">
+
+  <link rel="icon" href="{{url_for('static', filename='images/favicon.ico')}}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{{url_for('static', filename='images/apple-touch-icon.png')}}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{{url_for('static', filename='images/favicon-32x32.png')}}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{{url_for('static', filename='images/favicon-16x16.png')}}">
 
   <link rel="stylesheet" href="{{url_for('static', filename='css/styles.css')}}?v=1.0">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -17,7 +21,9 @@
 <body class="container-fluid">
   <header>
     <div class="container py-2">
-      <img src="{{url_for('static', filename='images/logo.png')}}" alt="Logo"/>
+      <a href="{{url_for('index')}}">
+        <img id="logo" src="{{url_for('static', filename='images/logo.png')}}" alt="Logo"/>
+      </a>
     </div>
   </header>
   <div id="content" class="container mt-2">

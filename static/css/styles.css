@@ -6,3 +6,7 @@ html > body {
 header {
   background-color: #ddd;
 }
+
+#logo {
+  height: 80px;
+}

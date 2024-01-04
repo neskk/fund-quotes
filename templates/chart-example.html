@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %} Charts {% endblock %}
+{% block meta %}
+{% include "meta.html" %}
+{% endblock %}
+{% block content %}
+<h3>Charts</h3>
+<div class="container">
+  {# https://jinja.palletsprojects.com/en/3.0.x/templates/#whitespace-control #}
+  <div>
+    <div id="myChart"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block javascript %}
+<script src='https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.17/d3.min.js'></script>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js@2.27.1/dist/plotly.min.js"></script>
+<script>
+  d3.csv("https://raw.githubusercontent.com/plotly/datasets/master/finance-charts-apple.csv", function(err, rows) {
+    function unpack(rows, key) {
+      return rows.map(function(row) { return row[key]; });
+    }
+
+    var trace1 = {
+      type: "scatter",
+      mode: "lines",
+      name: 'AAPL High',
+      x: unpack(rows, 'Date'),
+      y: unpack(rows, 'AAPL.High'),
+      line: {color: '#17BECF'}
+    }
+    console.log(trace1);
+
+    var trace2 = {
+      type: "scatter",
+      mode: "lines",
+      name: 'AAPL Low',
+      x: unpack(rows, 'Date'),
+      y: unpack(rows, 'AAPL.Low'),
+      line: {color: '#7F7F7F'}
+    }
+
+    var data = [trace1,trace2];
+
+    var layout = {
+      title: 'Basic Time Series',
+    };
+
+    Plotly.newPlot('myChart', data, layout);
+  });
+</script>
+{% endblock %}

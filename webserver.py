@@ -40,14 +40,20 @@ def index():
         'Fund count': Fund.select().count(),
         'Quote count': Quote.select().count(),
     }
-    return render_template('page.html', data=stats)
+    data = Fund.get_all()
+    return render_template('page.html', data=data, stats=stats)
+
+
+@app.route('/chart-example')
+def chart_example():
+    return render_template('chart-example.html', data=None)
 
 
 @app.route('/chart/<int:fund_id>')
 def chart(fund_id):
-    query = Quote.get_by_fund(fund_id).dicts()
-    data = [quote for quote in query.execute()]
-    return render_template('chart.html', data=data)
+    fund = Fund.get(fund_id)
+
+    return render_template('chart.html', fund=fund)
 
 
 @app.route('/quotes/<int:fund_id>')
@@ -68,8 +74,15 @@ def quotes(fund_id):
     if limit > 1000:
         limit = 1000
 
+    data = []
     query = Quote.get_by_fund(fund_id).dicts()
-    data = [(quote['date'].strftime('%d-%m-%Y'), quote['value']) for quote in query.execute()]
+    for quote in query:
+        data.append(
+            {
+                'date': quote['date'].strftime('%Y-%m-%d'),
+                'value': quote['value']
+            }
+        )
 
     return jsonify(data)
 
