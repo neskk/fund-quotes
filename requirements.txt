@@ -1,5 +1,6 @@
 configargparse==1.5.3
 flask==2.3.2
+flask_admin==1.6.1
 pymysql==1.0.3
 peewee==3.16.2
 pysocks==1.7.1
