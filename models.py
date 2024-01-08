@@ -3,11 +3,8 @@
 
 import logging
 
-from peewee import (
-    fn, JOIN, Case, OperationalError, IntegrityError,
-    Model, ModelSelect, ModelUpdate, ModelDelete,
-    ForeignKeyField, AutoField, BigAutoField, DateField, DateTimeField,
-    CharField, IntegerField, BigIntegerField, SmallIntegerField, FloatField)
+import peewee
+from flask_admin.contrib.peewee import ModelView
 
 from datetime import datetime, timedelta
 
@@ -18,31 +15,31 @@ log = logging.getLogger(__name__)
 # Custom field types
 # https://docs.peewee-orm.com/en/latest/peewee/models.html#field-types-table
 ###############################################################################
-class Utf8mb4CharField(CharField):
+class Utf8mb4CharField(peewee.CharField):
     def __init__(self, max_length=191, *args, **kwargs):
         self.max_length = max_length
-        super(CharField, self).__init__(*args, **kwargs)
+        super(peewee.CharField, self).__init__(*args, **kwargs)
 
 
-class UBigIntegerField(BigIntegerField):
+class UBigIntegerField(peewee.BigIntegerField):
     field_type = 'bigint unsigned'
 
 
-class UIntegerField(IntegerField):
+class UIntegerField(peewee.IntegerField):
     field_type = 'int unsigned'
 
 
-class USmallIntegerField(SmallIntegerField):
+class USmallIntegerField(peewee.SmallIntegerField):
     field_type = 'smallint unsigned'
 
 
 # https://github.com/coleifer/peewee/issues/630
-class IntEnumField(SmallIntegerField):
+class IntEnumField(peewee.SmallIntegerField):
     """	Unsigned integer representation field for Enum """
     field_type = 'smallint unsigned'
 
     def __init__(self, choices, *args, **kwargs):
-        super(SmallIntegerField, self).__init__(*args, **kwargs)
+        super(peewee.SmallIntegerField, self).__init__(*args, **kwargs)
         self.choices = choices
 
     def db_value(self, value):
@@ -59,7 +56,7 @@ class IntEnumField(SmallIntegerField):
 # https://docs.peewee-orm.com/en/latest/peewee/models.html#field-initialization-arguments
 # Note: field attribute "default" is implemented purely in Python and "choices" are not validated.
 ###############################################################################
-class BaseModel(Model):
+class BaseModel(peewee.Model):
     @classmethod
     def database(cls):
         return cls._meta.database
@@ -70,24 +67,24 @@ class BaseModel(Model):
 
     @classmethod
     def get_random(cls, limit=1):
-        return cls.select().order_by(fn.Rand()).limit(limit)
+        return cls.select().order_by(peewee.fn.Rand()).limit(limit)
 
 
 class Fund(BaseModel):
-    id = AutoField()
+    id = peewee.AutoField()
     name = Utf8mb4CharField(index=True, null=True, max_length=200)
     bank = Utf8mb4CharField(index=True, null=True, max_length=100)
-    start_date = DateTimeField(null=True)
-    created = DateTimeField(index=True, default=datetime.utcnow)
-    modified = DateTimeField(index=True, default=datetime.utcnow)
+    start_date = peewee.DateTimeField(null=True)
+    created = peewee.DateTimeField(index=True, default=datetime.utcnow)
+    modified = peewee.DateTimeField(index=True, default=datetime.utcnow)
 
 
 class Quote(BaseModel):
-    id = BigAutoField()
-    fund = ForeignKeyField(Fund, backref='quotes', on_delete='CASCADE')
-    value = FloatField(null=False)
-    date = DateField(index=True, default=datetime.today)
-    modified = DateTimeField(index=True, default=datetime.utcnow)
+    id = peewee.BigAutoField()
+    fund = peewee.ForeignKeyField(Fund, backref='quotes', on_delete='CASCADE')
+    value = peewee.FloatField(null=False)
+    date = peewee.DateField(index=True, default=datetime.today)
+    modified = peewee.DateTimeField(index=True, default=datetime.utcnow)
 
     @staticmethod
     def get_latest(fund):
@@ -110,7 +107,7 @@ class DBConfig(BaseModel):
     """ Database versioning model """
     key = Utf8mb4CharField(null=False, max_length=64, unique=True)
     val = Utf8mb4CharField(null=True, max_length=64)
-    modified = DateTimeField(index=True, default=datetime.utcnow)
+    modified = peewee.DateTimeField(index=True, default=datetime.utcnow)
 
     class Meta:
         primary_key = False
@@ -195,3 +192,36 @@ class DBConfig(BaseModel):
 
         log.debug('Failed to unlock database.')
         return False
+
+
+###############################################################################
+# Flask-Admin Model Views
+# https://flask-admin.readthedocs.io/en/latest/introduction/
+# https://github.com/flask-admin/flask-admin/tree/master/examples/peewee
+# https://flask-admin.readthedocs.io/en/latest/api/mod_contrib_peewee/#module-flask_admin.contrib.peewee
+###############################################################################
+class FundAdmin(ModelView):
+    # CRUD
+    can_create = False
+    can_edit = False
+    can_delete = False
+
+    # Show modals instead of separate page
+    create_modal = True
+    edit_modal = True
+
+    # Remove columns from the list view
+    column_exclude_list = ['created']
+
+    # Inline edit
+    column_editable_list = []
+
+    # List of columns that can be sorted
+    column_sortable_list = ['bank', 'name']
+
+    # Full text search
+    column_searchable_list = ['name']
+
+    # Column filters
+    # Warning: can not use filters on custom field types
+    column_filters = []

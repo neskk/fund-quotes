@@ -3,6 +3,7 @@ flask==2.3.2
 flask_admin==1.6.1
 pymysql==1.0.3
 peewee==3.16.2
+wtf-peewee==3.0.5
 pysocks==1.7.1
 requests==2.31
 beautifulsoup4==4.12.2

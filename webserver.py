@@ -1,4 +1,6 @@
 from flask import Flask, Response, request, abort, render_template, jsonify, send_file
+from flask_admin import Admin
+from flask_admin.menu import MenuLink
 
 from datetime import datetime, timedelta
 import logging
@@ -6,7 +8,7 @@ import sys
 
 from config import Config
 from db import Database
-from models import Fund, Quote
+from models import Fund, Quote, FundAdmin
 from utils import configure_logging
 
 log = logging.getLogger(__name__)
@@ -18,6 +20,9 @@ app = Flask(__name__,
             template_folder='templates')
 
 app.config['JSON_SORT_KEYS'] = False
+# set optional bootswatch theme
+app.config['FLASK_ADMIN_SWATCH'] = 'cerulean'
+
 args = None
 db = None
 
@@ -87,48 +92,6 @@ def quotes(fund_id):
     return jsonify(data)
 
 
-@app.route('/proxylist')
-def proxylist():
-    protocol = request.args.get('protocol', None)
-    limit = int(request.args.get('limit', 100))
-    max_age = int(request.args.get('max_age', 3600))
-    exclude_countries = request.args.get('exclude_countries', [])
-
-    if limit > 1000:
-        limit = 1000
-    if max_age > 86400:
-        max_age = 86400
-
-    if protocol:
-        protocol = ProxyProtocol[protocol.upper()]
-
-    if exclude_countries:
-        exclude_countries = exclude_countries.split(',')
-
-    query = Proxy.get_valid(
-        limit,
-        max_age,
-        protocol,
-        exclude_countries)
-
-    data = [proxy.url() for proxy in query.execute()]
-
-    return jsonify(data)
-
-
-@app.route('/proxy/<id>')
-def proxy(id):
-
-    if not id:
-        abort(400)
-
-    proxy = Proxy.get(id)
-    if not proxy:
-        abort(400)
-
-    return jsonify(proxy.test_score())
-
-
 @app.route('/get_image')
 def get_image():
     filepath = db.query('')
@@ -146,6 +109,10 @@ if __name__ == '__main__':
         args = Config.get_args()
         configure_logging(log, args.verbose, args.log_path, "-webserver")
         db = Database.get_db()
+
+        admin = Admin(app, name='fund-quotes', template_mode='bootstrap3')
+        # admin.add_link(MenuLink(name='Home Page', url='/'))
+        admin.add_view(FundAdmin(Fund))
 
         log.info('Starting webserver...')
         # Note: Flask reloader runs two processes
