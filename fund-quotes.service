@@ -1,0 +1,14 @@
+[Unit]
+Description=Fund-Quotes
+After=multi-user.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /root/fund-quotes/app.py -cf .\config\remote.ini -v
+WorkingDirectory=/root
+Restart=always
+#Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

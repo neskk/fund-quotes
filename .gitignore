@@ -1,6 +1,6 @@
 .vscode/settings.json
 config/
-!config.example.ini
+!config/config.example.ini
 downloads/
 logs/
 venv/
