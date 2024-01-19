@@ -76,7 +76,8 @@ class Scrapper(ABC, Thread):
             response = self.session.get(
                 url,
                 timeout=self.timeout,
-                headers=headers)
+                headers=headers,
+                verify=False)
 
         response.raise_for_status()
 
