@@ -44,7 +44,7 @@ class AR(Scrapper):
             date = datetime.strptime(date, '%d-%m-%Y').date()
             quote = float(quote.replace(',', '.'))
 
-            if latest_quote.date >= date:
+            if latest_quote and latest_quote.date >= date:
                 continue
 
             self.update_db(fund, date, quote)

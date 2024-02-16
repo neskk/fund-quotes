@@ -59,8 +59,9 @@ class Database():
         # Bind models to this database
         database.bind(self.MODELS)
 
+        self.DB.connect()
+
         try:
-            self.DB.connect()
             self.verify_database_schema()
             self.verify_table_encoding()
         except OperationalError as e:
